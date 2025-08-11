@@ -46,7 +46,7 @@ export default function Home() {
             <KanbanBoard onTaskSelect={setSelectedTaskId} />
           </div>
           <div className="xl:col-span-1">
-            <PomodoroTimer selectedTaskId={selectedTaskId} />
+            <PomodoroTimer selectedTaskId={selectedTaskId} onTaskSelect={setSelectedTaskId} />
           </div>
         </div>
       </div>

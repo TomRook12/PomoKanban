@@ -5,12 +5,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Pause, Play, RotateCcw, Clock, CheckSquare } from "lucide-react";
 import type { Task } from "@shared/schema";
 import { usePomodoro } from "@/hooks/use-pomodoro";
+import { useToast } from "@/hooks/use-toast";
 
 interface PomodoroTimerProps {
   selectedTaskId: string | null;
+  onTaskSelect: (taskId: string) => void;
 }
 
-export function PomodoroTimer({ selectedTaskId }: PomodoroTimerProps) {
+export function PomodoroTimer({ selectedTaskId, onTaskSelect }: PomodoroTimerProps) {
+  const [isDragOver, setIsDragOver] = useState(false);
+  const { toast } = useToast();
+  
   const { data: tasks = [] } = useQuery<Task[]>({
     queryKey: ["/api/tasks"],
   });
@@ -73,12 +78,50 @@ export function PomodoroTimer({ selectedTaskId }: PomodoroTimerProps) {
     }
   };
 
+  // Handle drag-and-drop for task selection
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const taskId = e.dataTransfer.getData("text/plain");
+    if (taskId) {
+      onTaskSelect(taskId);
+      toast({
+        title: "Task Selected!",
+        description: "Task selected for your Pomodoro session.",
+      });
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
   // Mock statistics - in a real app, these would be tracked
   const todaysPomodoros = 6;
   const todaysTasks = 3;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sticky top-8">
+    <div 
+      className={`bg-white rounded-xl shadow-sm border p-6 sticky top-8 transition-all duration-200 ${
+        isDragOver 
+          ? 'border-blue-400 bg-blue-50 border-2' 
+          : 'border-slate-200'
+      }`}
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+    >
       <div className="text-center mb-6">
         <h3 className="text-xl font-bold text-slate-900 mb-2">Pomodoro Timer</h3>
         <p className="text-slate-600 text-sm">Stay focused and productive</p>
@@ -100,9 +143,16 @@ export function PomodoroTimer({ selectedTaskId }: PomodoroTimerProps) {
       )}
 
       {!selectedTask && (
-        <div className="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+        <div className={`mb-6 p-4 rounded-lg border transition-all duration-200 ${
+          isDragOver 
+            ? 'bg-blue-100 border-blue-300 border-dashed' 
+            : 'bg-slate-50 border-slate-200'
+        }`}>
           <div className="text-center text-slate-600 text-sm">
-            Select a task from the board to start a Pomodoro session
+            {isDragOver 
+              ? "Drop task here to start a Pomodoro session" 
+              : "Click a task from the board or drag it here to start a Pomodoro session"
+            }
           </div>
         </div>
       )}
