@@ -8,6 +8,7 @@ export const tasks = pgTable("tasks", {
   description: text("description").notNull(),
   priority: varchar("priority", { length: 10 }).notNull(), // 'low', 'medium', 'high'
   stage: varchar("stage", { length: 20 }).notNull(), // 'todo', 'in-progress', 'clarification', 'complete'
+  archived: varchar("archived", { length: 10 }).default("false").notNull(), // 'true', 'false'
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

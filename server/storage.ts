@@ -7,11 +7,13 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   
   // Task operations
-  getTasks(): Promise<Task[]>;
+  getTasks(archived?: string): Promise<Task[]>;
   getTask(id: string): Promise<Task | undefined>;
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: string, updates: UpdateTask): Promise<Task | undefined>;
   deleteTask(id: string): Promise<boolean>;
+  archiveTask(id: string): Promise<Task | undefined>;
+  archiveAllComplete(): Promise<number>;
 }
 
 export class MemStorage implements IStorage {
@@ -40,10 +42,12 @@ export class MemStorage implements IStorage {
     return user;
   }
 
-  async getTasks(): Promise<Task[]> {
-    return Array.from(this.tasks.values()).sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+  async getTasks(archived = "false"): Promise<Task[]> {
+    return Array.from(this.tasks.values())
+      .filter(task => task.archived === archived)
+      .sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
   }
 
   async getTask(id: string): Promise<Task | undefined> {
@@ -55,6 +59,7 @@ export class MemStorage implements IStorage {
     const task: Task = {
       ...insertTask,
       id,
+      archived: "false",
       createdAt: new Date(),
     };
     this.tasks.set(id, task);
@@ -78,6 +83,36 @@ export class MemStorage implements IStorage {
 
   async deleteTask(id: string): Promise<boolean> {
     return this.tasks.delete(id);
+  }
+
+  async archiveTask(id: string): Promise<Task | undefined> {
+    const existingTask = this.tasks.get(id);
+    if (!existingTask) {
+      return undefined;
+    }
+
+    const archivedTask: Task = {
+      ...existingTask,
+      archived: "true",
+    };
+    
+    this.tasks.set(id, archivedTask);
+    return archivedTask;
+  }
+
+  async archiveAllComplete(): Promise<number> {
+    let count = 0;
+    for (const [id, task] of this.tasks.entries()) {
+      if (task.stage === "complete" && task.archived === "false") {
+        const archivedTask: Task = {
+          ...task,
+          archived: "true",
+        };
+        this.tasks.set(id, archivedTask);
+        count++;
+      }
+    }
+    return count;
   }
 }
 

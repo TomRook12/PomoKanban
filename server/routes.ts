@@ -7,7 +7,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all tasks
   app.get("/api/tasks", async (req, res) => {
     try {
-      const tasks = await storage.getTasks();
+      const archived = req.query.archived as string || "false";
+      const tasks = await storage.getTasks(archived);
       res.json(tasks);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch tasks" });
@@ -68,6 +69,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete task" });
+    }
+  });
+
+  // Archive task
+  app.patch("/api/tasks/:id/archive", async (req, res) => {
+    try {
+      const task = await storage.archiveTask(req.params.id);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      res.json(task);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to archive task" });
+    }
+  });
+
+  // Archive all complete tasks
+  app.patch("/api/tasks/archive-complete", async (req, res) => {
+    try {
+      const count = await storage.archiveAllComplete();
+      res.json({ archivedCount: count });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to archive complete tasks" });
     }
   });
 

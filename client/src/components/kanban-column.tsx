@@ -3,6 +3,8 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Task, UpdateTask } from "@shared/schema";
 import { TaskCard } from "./task-card";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Archive } from "lucide-react";
 
 interface Column {
   id: string;
@@ -35,6 +37,46 @@ export function KanbanColumn({ column, onTaskSelect }: KanbanColumnProps) {
     },
   });
 
+  const archiveTaskMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("PATCH", `/api/tasks/${id}/archive`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({
+        title: "Task Archived",
+        description: "Task has been moved to the archive.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to archive task",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const archiveAllCompleteMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("PATCH", "/api/tasks/archive-complete");
+    },
+    onSuccess: (data: { archivedCount: number }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({
+        title: "Tasks Archived",
+        description: `${data.archivedCount} completed tasks have been archived.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to archive completed tasks",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const taskId = e.dataTransfer.getData("text/plain");
@@ -61,9 +103,23 @@ export function KanbanColumn({ column, onTaskSelect }: KanbanColumnProps) {
           <div className={`w-3 h-3 rounded-full ${column.color}`} />
           <h3 className="font-semibold text-slate-900">{column.title}</h3>
         </div>
-        <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-md text-xs font-medium">
-          {column.tasks.length}
-        </span>
+        <div className="flex items-center space-x-2">
+          {column.id === "complete" && column.tasks.length > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => archiveAllCompleteMutation.mutate()}
+              disabled={archiveAllCompleteMutation.isPending}
+              className="text-xs text-slate-600 hover:text-blue-600 px-2 py-1"
+            >
+              <Archive size={12} className="mr-1" />
+              Archive All
+            </Button>
+          )}
+          <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-md text-xs font-medium">
+            {column.tasks.length}
+          </span>
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -72,6 +128,7 @@ export function KanbanColumn({ column, onTaskSelect }: KanbanColumnProps) {
             key={task.id}
             task={task}
             onSelect={() => onTaskSelect(task.id)}
+            onArchive={column.id === "complete" ? () => archiveTaskMutation.mutate(task.id) : undefined}
           />
         ))}
         

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Edit } from "lucide-react";
+import { Edit, Archive } from "lucide-react";
 import type { Task } from "@shared/schema";
 import { TaskModal } from "./task-modal";
 import { cn } from "@/lib/utils";
@@ -7,9 +7,10 @@ import { cn } from "@/lib/utils";
 interface TaskCardProps {
   task: Task;
   onSelect: () => void;
+  onArchive?: () => void;
 }
 
-export function TaskCard({ task, onSelect }: TaskCardProps) {
+export function TaskCard({ task, onSelect, onArchive }: TaskCardProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const handleDragStart = (e: React.DragEvent) => {
@@ -82,15 +83,30 @@ export function TaskCard({ task, onSelect }: TaskCardProps) {
         
         <div className="flex items-center justify-between text-xs text-slate-500">
           <span>{formatTimeAgo(new Date(task.createdAt))}</span>
-          <button
-            className="hover:text-blue-600 transition-colors"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsEditModalOpen(true);
-            }}
-          >
-            <Edit size={12} />
-          </button>
+          <div className="flex items-center space-x-1">
+            {onArchive && (
+              <button
+                className="hover:text-green-600 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onArchive();
+                }}
+                title="Archive task"
+              >
+                <Archive size={12} />
+              </button>
+            )}
+            <button
+              className="hover:text-blue-600 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsEditModalOpen(true);
+              }}
+              title="Edit task"
+            >
+              <Edit size={12} />
+            </button>
+          </div>
         </div>
       </div>
 
