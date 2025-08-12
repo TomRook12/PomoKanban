@@ -27,6 +27,17 @@ export function PomodoroTimer({ selectedTaskId, onTaskSelect }: PomodoroTimerPro
 
   const selectedTask = tasks.find(task => task.id === selectedTaskId);
   
+  // Clear selected task if it becomes completed
+  useEffect(() => {
+    if (selectedTask && selectedTask.stage === "complete") {
+      onTaskSelect("");
+      toast({
+        title: "Task Completed!",
+        description: "Task removed from Pomodoro timer as it's now complete.",
+      });
+    }
+  }, [selectedTask, onTaskSelect, toast]);
+  
   const {
     timeRemaining,
     isActive,
@@ -273,83 +284,86 @@ export function PomodoroTimer({ selectedTaskId, onTaskSelect }: PomodoroTimerPro
               {showSettings ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </Button>
           </CollapsibleTrigger>
-          <CollapsibleContent className="mt-4 space-y-4">
-            {/* Duration Settings */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">Work Duration</span>
-                <Select value={workDuration.toString()} onValueChange={(value) => setWorkDuration(Number(value))}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="900">15 minutes</SelectItem>
-                    <SelectItem value="1500">25 minutes</SelectItem>
-                    <SelectItem value="3000">50 minutes</SelectItem>
-                  </SelectContent>
-                </Select>
+          <CollapsibleContent className="mt-4 p-4 bg-slate-50 rounded-lg border">
+            <div className="space-y-4">
+              {/* Duration Settings */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-700 font-medium">Work Duration</span>
+                  <Select value={workDuration.toString()} onValueChange={(value) => setWorkDuration(Number(value))}>
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="900">15 minutes</SelectItem>
+                      <SelectItem value="1500">25 minutes</SelectItem>
+                      <SelectItem value="3000">50 minutes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-700 font-medium">Short Break</span>
+                  <Select value={shortBreak.toString()} onValueChange={(value) => setShortBreak(Number(value))}>
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="300">5 minutes</SelectItem>
+                      <SelectItem value="600">10 minutes</SelectItem>
+                      <SelectItem value="900">15 minutes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-700 font-medium">Long Break</span>
+                  <Select value={longBreak.toString()} onValueChange={(value) => setLongBreak(Number(value))}>
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1200">20 minutes</SelectItem>
+                      <SelectItem value="1800">30 minutes</SelectItem>
+                      <SelectItem value="2400">40 minutes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">Short Break</span>
-                <Select value={shortBreak.toString()} onValueChange={(value) => setShortBreak(Number(value))}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="300">5 minutes</SelectItem>
-                    <SelectItem value="600">10 minutes</SelectItem>
-                    <SelectItem value="900">15 minutes</SelectItem>
-                  </SelectContent>
-                </Select>
+              
+              <div className="border-t border-slate-200 pt-4">
+                {/* Auto-run Setting */}
+                <div className="flex items-center justify-between py-3 px-3 bg-white rounded-lg border mb-3">
+                  <div>
+                    <Label htmlFor="auto-run" className="text-sm font-medium text-slate-900">
+                      Auto-run sessions
+                    </Label>
+                    <p className="text-xs text-slate-600">Automatically start next session</p>
+                  </div>
+                  <Switch
+                    id="auto-run"
+                    checked={autoRun}
+                    onCheckedChange={setAutoRun}
+                  />
+                </div>
+                
+                {/* Target Cycles Setting */}
+                <div className="flex items-center justify-between py-3 px-3 bg-white rounded-lg border">
+                  <div>
+                    <Label htmlFor="target-cycles" className="text-sm font-medium text-slate-900">
+                      Target Cycles
+                    </Label>
+                    <p className="text-xs text-slate-600">Number of Pomodoro cycles to complete</p>
+                  </div>
+                  <Input
+                    id="target-cycles"
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={targetCycles}
+                    onChange={(e) => setTargetCycles(Number(e.target.value))}
+                    className="w-16 text-center bg-white"
+                  />
+                </div>
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600">Long Break</span>
-                <Select value={longBreak.toString()} onValueChange={(value) => setLongBreak(Number(value))}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1200">20 minutes</SelectItem>
-                    <SelectItem value="1800">30 minutes</SelectItem>
-                    <SelectItem value="2400">40 minutes</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            {/* Auto-run Setting */}
-            <div className="flex items-center justify-between py-3 px-3 bg-slate-50 rounded-lg border">
-              <div>
-                <Label htmlFor="auto-run" className="text-sm font-medium text-slate-900">
-                  Auto-run sessions
-                </Label>
-                <p className="text-xs text-slate-600">Automatically start next session</p>
-              </div>
-              <Switch
-                id="auto-run"
-                checked={autoRun}
-                onCheckedChange={setAutoRun}
-                className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-slate-300"
-              />
-            </div>
-            
-            {/* Target Cycles Setting */}
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="target-cycles" className="text-sm font-medium text-slate-700">
-                  Target Cycles
-                </Label>
-                <p className="text-xs text-slate-500">Number of Pomodoro cycles to complete</p>
-              </div>
-              <Input
-                id="target-cycles"
-                type="number"
-                min="1"
-                max="10"
-                value={targetCycles}
-                onChange={(e) => setTargetCycles(Number(e.target.value))}
-                className="w-16 text-center"
-              />
             </div>
           </CollapsibleContent>
         </Collapsible>

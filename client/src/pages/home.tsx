@@ -1,15 +1,45 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Rocket, User, Plus, Archive, ArrowLeft } from "lucide-react";
+import { Rocket, User, Plus, Archive, ArrowLeft, LogOut } from "lucide-react";
 import { KanbanBoard } from "@/components/kanban-board";
 import { PomodoroTimer } from "@/components/pomodoro-timer";
 import { TaskModal } from "@/components/task-modal";
 import { ArchivedTasks } from "@/components/archived-tasks";
+import { useAuth } from "@/hooks/useAuth";
+import { Login } from "@/components/login";
 
 export default function Home() {
+  const { user, isLoading, isAuthenticated } = useAuth();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [viewArchived, setViewArchived] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      window.location.reload();
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <Rocket className="text-white" size={24} />
+          </div>
+          <h2 className="text-xl font-semibold text-slate-900 mb-2">Loading...</h2>
+          <p className="text-slate-600">Setting up your workspace</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Login />;
+  }
 
   return (
     <div className="bg-slate-50 min-h-screen">
@@ -51,8 +81,27 @@ export default function Home() {
                   </Button>
                 </>
               )}
-              <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center">
-                <User className="text-slate-600" size={16} />
+              <div className="flex items-center space-x-3">
+                {user?.profilePicture ? (
+                  <img 
+                    src={user.profilePicture} 
+                    alt={user.name}
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center">
+                    <User className="text-slate-600" size={16} />
+                  </div>
+                )}
+                <span className="text-sm text-slate-700 hidden md:block">{user?.name}</span>
+                <Button
+                  onClick={handleLogout}
+                  variant="ghost"
+                  size="sm"
+                  className="text-slate-600 hover:text-slate-900"
+                >
+                  <LogOut size={16} />
+                </Button>
               </div>
             </div>
           </div>
