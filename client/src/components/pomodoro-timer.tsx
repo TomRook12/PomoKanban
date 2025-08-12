@@ -318,17 +318,18 @@ export function PomodoroTimer({ selectedTaskId, onTaskSelect }: PomodoroTimerPro
             </div>
             
             {/* Auto-run Setting */}
-            <div className="flex items-center justify-between py-2">
+            <div className="flex items-center justify-between py-3 px-3 bg-slate-50 rounded-lg border">
               <div>
-                <Label htmlFor="auto-run" className="text-sm font-medium text-slate-700">
+                <Label htmlFor="auto-run" className="text-sm font-medium text-slate-900">
                   Auto-run sessions
                 </Label>
-                <p className="text-xs text-slate-500">Automatically start next session</p>
+                <p className="text-xs text-slate-600">Automatically start next session</p>
               </div>
               <Switch
                 id="auto-run"
                 checked={autoRun}
                 onCheckedChange={setAutoRun}
+                className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-slate-300"
               />
             </div>
             
