@@ -1,41 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import passport from "passport";
 import { storage } from "./storage";
 import { insertTaskSchema, updateTaskSchema } from "@shared/schema";
-import { setupAuth, requireAuth } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup authentication
-  await setupAuth(app);
-  
-  // Auth routes (only available if Google OAuth is configured)
-  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-    app.get('/api/auth/google',
-      passport.authenticate('google', { scope: ['profile', 'email'] })
-    );
-
-    app.get('/api/auth/google/callback',
-      passport.authenticate('google', { failureRedirect: '/login?error=auth_failed' }),
-      (req, res) => {
-        // Successful authentication, redirect to home
-        res.redirect('/');
-      }
-    );
-  }
-
-  app.get('/api/auth/user', requireAuth, (req, res) => {
-    res.json(req.user);
-  });
-
-  app.post('/api/auth/logout', (req, res) => {
-    req.logout(() => {
-      res.json({ message: 'Logged out successfully' });
-    });
-  });
-
-  // Get all tasks (protected route)
-  app.get("/api/tasks", requireAuth, async (req, res) => {
+  // Get all tasks
+  app.get("/api/tasks", async (req, res) => {
     try {
       const archived = req.query.archived as string || "false";
       const tasks = await storage.getTasks(archived);
@@ -58,8 +28,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create task (protected route)
-  app.post("/api/tasks", requireAuth, async (req, res) => {
+  // Create task
+  app.post("/api/tasks", async (req, res) => {
     try {
       const validatedData = insertTaskSchema.parse(req.body);
       const task = await storage.createTask(validatedData);
@@ -72,8 +42,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update task (protected route)
-  app.patch("/api/tasks/:id", requireAuth, async (req, res) => {
+  // Update task
+  app.patch("/api/tasks/:id", async (req, res) => {
     try {
       const validatedData = updateTaskSchema.parse(req.body);
       const task = await storage.updateTask(req.params.id, validatedData);
@@ -89,8 +59,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete task (protected route)
-  app.delete("/api/tasks/:id", requireAuth, async (req, res) => {
+  // Delete task
+  app.delete("/api/tasks/:id", async (req, res) => {
     try {
       const deleted = await storage.deleteTask(req.params.id);
       if (!deleted) {
@@ -102,8 +72,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Archive task (protected route)
-  app.patch("/api/tasks/:id/archive", requireAuth, async (req, res) => {
+  // Archive task
+  app.patch("/api/tasks/:id/archive", async (req, res) => {
     try {
       const task = await storage.archiveTask(req.params.id);
       if (!task) {
@@ -115,8 +85,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Archive all complete tasks (protected route)
-  app.patch("/api/tasks/archive-complete", requireAuth, async (req, res) => {
+  // Archive all complete tasks
+  app.patch("/api/tasks/archive-complete", async (req, res) => {
     try {
       const count = await storage.archiveAllComplete();
       res.json({ archivedCount: count });

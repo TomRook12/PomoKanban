@@ -3,9 +3,8 @@ import { randomUUID } from "crypto";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
-  getUserByGoogleId(googleId: string): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  updateUser(id: string, updates: Partial<InsertUser>): Promise<User>;
   
   // Task operations
   getTasks(archived?: string): Promise<Task[]>;
@@ -30,36 +29,17 @@ export class MemStorage implements IStorage {
     return this.users.get(id);
   }
 
-  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+  async getUserByUsername(username: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
-      (user) => user.googleId === googleId,
+      (user) => user.username === username,
     );
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const user: User = { 
-      ...insertUser, 
-      id, 
-      createdAt: new Date(),
-    };
+    const user: User = { ...insertUser, id };
     this.users.set(id, user);
     return user;
-  }
-
-  async updateUser(id: string, updates: Partial<InsertUser>): Promise<User> {
-    const existingUser = this.users.get(id);
-    if (!existingUser) {
-      throw new Error("User not found");
-    }
-    
-    const updatedUser: User = {
-      ...existingUser,
-      ...updates,
-    };
-    
-    this.users.set(id, updatedUser);
-    return updatedUser;
   }
 
   async getTasks(archived = "false"): Promise<Task[]> {

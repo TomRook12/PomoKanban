@@ -14,7 +14,6 @@ export const tasks = pgTable("tasks", {
 
 export const insertTaskSchema = createInsertSchema(tasks).omit({
   id: true,
-  archived: true,
   createdAt: true,
 });
 
@@ -26,16 +25,13 @@ export type Task = typeof tasks.$inferSelect;
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: text("email").notNull().unique(),
-  name: text("name").notNull(),
-  googleId: text("google_id").notNull().unique(),
-  profilePicture: text("profile_picture"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
 });
 
-export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
-  createdAt: true,
+export const insertUserSchema = createInsertSchema(users).pick({
+  username: true,
+  password: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
