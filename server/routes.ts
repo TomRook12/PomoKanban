@@ -2,23 +2,41 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertTaskSchema, updateTaskSchema } from "@shared/schema";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Get all tasks
-  app.get("/api/tasks", async (req, res) => {
+  // Auth middleware
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Get all tasks (protected)
+  app.get("/api/tasks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
       const archived = req.query.archived as string || "false";
-      const tasks = await storage.getTasks(archived);
+      const tasks = await storage.getTasks(userId, archived);
       res.json(tasks);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch tasks" });
     }
   });
 
-  // Get single task
-  app.get("/api/tasks/:id", async (req, res) => {
+  // Get single task (protected)
+  app.get("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const task = await storage.getTask(req.params.id);
+      const userId = req.user.claims.sub;
+      const task = await storage.getTask(req.params.id, userId);
       if (!task) {
         return res.status(404).json({ message: "Task not found" });
       }
@@ -28,11 +46,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create task
-  app.post("/api/tasks", async (req, res) => {
+  // Create task (protected)
+  app.post("/api/tasks", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const validatedData = insertTaskSchema.parse(req.body);
-      const task = await storage.createTask(validatedData);
+      const task = await storage.createTask({
+        ...validatedData,
+        userId: userId
+      } as any);
       res.status(201).json(task);
     } catch (error) {
       if (error instanceof Error && error.name === 'ZodError') {
@@ -42,11 +64,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update task
-  app.patch("/api/tasks/:id", async (req, res) => {
+  // Update task (protected)
+  app.patch("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const validatedData = updateTaskSchema.parse(req.body);
-      const task = await storage.updateTask(req.params.id, validatedData);
+      const task = await storage.updateTask(req.params.id, userId, validatedData);
       if (!task) {
         return res.status(404).json({ message: "Task not found" });
       }
@@ -59,10 +82,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete task
-  app.delete("/api/tasks/:id", async (req, res) => {
+  // Delete task (protected)
+  app.delete("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const deleted = await storage.deleteTask(req.params.id);
+      const userId = req.user.claims.sub;
+      const deleted = await storage.deleteTask(req.params.id, userId);
       if (!deleted) {
         return res.status(404).json({ message: "Task not found" });
       }
@@ -72,10 +96,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Archive task
-  app.patch("/api/tasks/:id/archive", async (req, res) => {
+  // Archive task (protected)
+  app.patch("/api/tasks/:id/archive", isAuthenticated, async (req: any, res) => {
     try {
-      const task = await storage.archiveTask(req.params.id);
+      const userId = req.user.claims.sub;
+      const task = await storage.archiveTask(req.params.id, userId);
       if (!task) {
         return res.status(404).json({ message: "Task not found" });
       }
@@ -85,13 +110,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Archive all complete tasks
-  app.patch("/api/tasks/archive-complete", async (req, res) => {
+  // Archive all completed tasks (protected)
+  app.post("/api/tasks/archive-complete", isAuthenticated, async (req: any, res) => {
     try {
-      const count = await storage.archiveAllComplete();
+      const userId = req.user.claims.sub;
+      const count = await storage.archiveAllComplete(userId);
       res.json({ archivedCount: count });
     } catch (error) {
-      res.status(500).json({ message: "Failed to archive complete tasks" });
+      res.status(500).json({ message: "Failed to archive completed tasks" });
     }
   });
 

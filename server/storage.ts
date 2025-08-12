@@ -1,119 +1,119 @@
-import { type User, type InsertUser, type Task, type InsertTask, type UpdateTask } from "@shared/schema";
-import { randomUUID } from "crypto";
+import {
+  users,
+  tasks,
+  type User,
+  type UpsertUser,
+  type Task,
+  type UpdateTask,
+  type InsertTask,
+} from "@shared/schema";
+import { db } from "./db";
+import { eq, and } from "drizzle-orm";
 
+// Interface for storage operations
 export interface IStorage {
+  // User operations (mandatory for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  upsertUser(user: UpsertUser): Promise<User>;
   
   // Task operations
-  getTasks(archived?: string): Promise<Task[]>;
-  getTask(id: string): Promise<Task | undefined>;
+  getTasks(userId: string, archived?: string): Promise<Task[]>;
+  getTask(id: string, userId: string): Promise<Task | undefined>;
   createTask(task: InsertTask): Promise<Task>;
-  updateTask(id: string, updates: UpdateTask): Promise<Task | undefined>;
-  deleteTask(id: string): Promise<boolean>;
-  archiveTask(id: string): Promise<Task | undefined>;
-  archiveAllComplete(): Promise<number>;
+  updateTask(id: string, userId: string, updates: UpdateTask): Promise<Task | undefined>;
+  deleteTask(id: string, userId: string): Promise<boolean>;
+  archiveTask(id: string, userId: string): Promise<Task | undefined>;
+  archiveAllComplete(userId: string): Promise<number>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-  private tasks: Map<string, Task>;
-
-  constructor() {
-    this.users = new Map();
-    this.tasks = new Map();
-  }
-
+export class DatabaseStorage implements IStorage {
+  // User operations (mandatory for Replit Auth)
   async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
 
-  async getTasks(archived = "false"): Promise<Task[]> {
-    return Array.from(this.tasks.values())
-      .filter(task => task.archived === archived)
-      .sort((a, b) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
   }
 
-  async getTask(id: string): Promise<Task | undefined> {
-    return this.tasks.get(id);
+  // Task operations
+  async getTasks(userId: string, archived = "false"): Promise<Task[]> {
+    return await db
+      .select()
+      .from(tasks)
+      .where(and(eq(tasks.userId, userId), eq(tasks.archived, archived)))
+      .orderBy(tasks.createdAt);
   }
 
-  async createTask(insertTask: InsertTask): Promise<Task> {
-    const id = randomUUID();
-    const task: Task = {
-      ...insertTask,
-      id,
-      archived: "false",
-      createdAt: new Date(),
-    };
-    this.tasks.set(id, task);
+  async getTask(id: string, userId: string): Promise<Task | undefined> {
+    const [task] = await db
+      .select()
+      .from(tasks)
+      .where(and(eq(tasks.id, id), eq(tasks.userId, userId)));
     return task;
   }
 
-  async updateTask(id: string, updates: UpdateTask): Promise<Task | undefined> {
-    const existingTask = this.tasks.get(id);
-    if (!existingTask) {
-      return undefined;
-    }
+  async createTask(task: InsertTask): Promise<Task> {
+    const [createdTask] = await db
+      .insert(tasks)
+      .values({
+        ...task,
+        archived: "false",
+      })
+      .returning();
+    return createdTask;
+  }
 
-    const updatedTask: Task = {
-      ...existingTask,
-      ...updates,
-    };
-    
-    this.tasks.set(id, updatedTask);
+  async updateTask(id: string, userId: string, updates: UpdateTask): Promise<Task | undefined> {
+    const [updatedTask] = await db
+      .update(tasks)
+      .set(updates)
+      .where(and(eq(tasks.id, id), eq(tasks.userId, userId)))
+      .returning();
     return updatedTask;
   }
 
-  async deleteTask(id: string): Promise<boolean> {
-    return this.tasks.delete(id);
+  async deleteTask(id: string, userId: string): Promise<boolean> {
+    const result = await db
+      .delete(tasks)
+      .where(and(eq(tasks.id, id), eq(tasks.userId, userId)));
+    return result.rowCount > 0;
   }
 
-  async archiveTask(id: string): Promise<Task | undefined> {
-    const existingTask = this.tasks.get(id);
-    if (!existingTask) {
-      return undefined;
-    }
-
-    const archivedTask: Task = {
-      ...existingTask,
-      archived: "true",
-    };
-    
-    this.tasks.set(id, archivedTask);
+  async archiveTask(id: string, userId: string): Promise<Task | undefined> {
+    const [archivedTask] = await db
+      .update(tasks)
+      .set({ archived: "true" })
+      .where(and(eq(tasks.id, id), eq(tasks.userId, userId)))
+      .returning();
     return archivedTask;
   }
 
-  async archiveAllComplete(): Promise<number> {
-    let count = 0;
-    for (const [id, task] of this.tasks.entries()) {
-      if (task.stage === "complete" && task.archived === "false") {
-        const archivedTask: Task = {
-          ...task,
-          archived: "true",
-        };
-        this.tasks.set(id, archivedTask);
-        count++;
-      }
-    }
-    return count;
+  async archiveAllComplete(userId: string): Promise<number> {
+    const result = await db
+      .update(tasks)
+      .set({ archived: "true" })
+      .where(
+        and(
+          eq(tasks.userId, userId),
+          eq(tasks.stage, "complete"),
+          eq(tasks.archived, "false")
+        )
+      );
+    return result.rowCount;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

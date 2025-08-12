@@ -3,15 +3,34 @@ import { Button } from "@/components/ui/button";
 import { Archive, Trash2 } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { isUnauthorizedError } from "@/lib/authUtils";
 import type { Task } from "@shared/schema";
 
 export function ArchivedTasks() {
   const { toast } = useToast();
 
-  const { data: archivedTasks = [], isLoading } = useQuery<Task[]>({
+  const { data: archivedTasks = [], isLoading, error } = useQuery<Task[]>({
     queryKey: ["/api/tasks", "archived"],
     queryFn: () => fetch("/api/tasks?archived=true").then(res => res.json()),
+    retry: (failureCount, error) => {
+      if (isUnauthorizedError(error as Error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
+
+  if (error && isUnauthorizedError(error as Error)) {
+    return null;
+  }
 
   const deleteTaskMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -24,7 +43,18 @@ export function ArchivedTasks() {
         description: "The task has been permanently deleted.",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
       toast({
         title: "Error",
         description: "Failed to delete task",

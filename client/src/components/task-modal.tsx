@@ -12,6 +12,7 @@ import { insertTaskSchema } from "@shared/schema";
 import type { Task, InsertTask, UpdateTask } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { isUnauthorizedError } from "@/lib/authUtils";
 import { z } from "zod";
 
 interface TaskModalProps {
@@ -73,9 +74,19 @@ export function TaskModal({ open, onOpenChange, taskId }: TaskModalProps) {
         description: "Task created successfully",
       });
       onOpenChange(false);
-      form.reset();
     },
-    onError: () => {
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
       toast({
         title: "Error",
         description: "Failed to create task",
@@ -96,7 +107,18 @@ export function TaskModal({ open, onOpenChange, taskId }: TaskModalProps) {
       });
       onOpenChange(false);
     },
-    onError: () => {
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
       toast({
         title: "Error",
         description: "Failed to update task",

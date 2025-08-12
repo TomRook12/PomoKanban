@@ -1,15 +1,55 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Rocket, User, Plus, Archive, ArrowLeft } from "lucide-react";
+import { Rocket, User, Plus, Archive, ArrowLeft, LogOut } from "lucide-react";
 import { KanbanBoard } from "@/components/kanban-board";
 import { PomodoroTimer } from "@/components/pomodoro-timer";
 import { TaskModal } from "@/components/task-modal";
 import { ArchivedTasks } from "@/components/archived-tasks";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function Home() {
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const { toast } = useToast();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [viewArchived, setViewArchived] = useState(false);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+      return;
+    }
+  }, [isAuthenticated, isLoading, toast]);
+
+  const handleLogout = () => {
+    window.location.href = "/api/logout";
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null; // Will redirect in useEffect
+  }
 
   return (
     <div className="bg-slate-50 min-h-screen">
@@ -51,9 +91,41 @@ export default function Home() {
                   </Button>
                 </>
               )}
-              <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center">
-                <User className="text-slate-600" size={16} />
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user?.profileImageUrl || undefined} alt={user?.firstName || "User"} />
+                      <AvatarFallback className="bg-blue-100 text-blue-600">
+                        {user?.firstName?.charAt(0) || user?.email?.charAt(0) || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700" align="end">
+                  <div className="flex items-center justify-start gap-2 p-2">
+                    <div className="flex flex-col space-y-1 leading-none">
+                      {user?.firstName || user?.lastName ? (
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          {user.firstName} {user.lastName}
+                        </p>
+                      ) : null}
+                      {user?.email && (
+                        <p className="w-[200px] truncate text-sm text-gray-600 dark:text-gray-300">
+                          {user.email}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <DropdownMenuItem
+                    className="text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>

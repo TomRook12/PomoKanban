@@ -2,13 +2,25 @@
 
 ## Overview
 
-FocusFlow is a productivity application that combines task management with the Pomodoro Technique. The application features a Kanban-style task board where users can organize tasks across different stages (To-Do, In Progress, Clarification, Complete) and an integrated Pomodoro timer to help maintain focus during work sessions.
+FocusFlow is a multi-user productivity application that combines task management with the Pomodoro Technique. The application features user authentication via Replit's OpenID Connect system, a personal Kanban-style task board where users can organize tasks across different stages (To-Do, In Progress, Clarification, Complete), and an integrated Pomodoro timer to help maintain focus during work sessions.
 
-The application is built as a full-stack web application with a React frontend and Express.js backend, designed to help users manage their workflow efficiently while incorporating proven productivity techniques.
+The application is built as a full-stack web application with a React frontend and Express.js backend, using PostgreSQL for persistent data storage and secure user authentication.
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+
+## Recent Changes (Updated: August 12, 2025)
+
+### Complete Authentication System Implementation
+- ✓ Integrated Replit OpenID Connect authentication system
+- ✓ Implemented user-specific task management with database relationships
+- ✓ Added comprehensive error handling for unauthorized access across all components
+- ✓ Created landing page for unauthenticated users with feature overview
+- ✓ Added user profile dropdown with logout functionality
+- ✓ Migrated from in-memory storage to PostgreSQL with proper user scoping
+- ✓ Updated all API endpoints to require authentication and scope to user data
+- ✓ Implemented session management with PostgreSQL-backed storage
 
 ## System Architecture
 
@@ -23,20 +35,27 @@ Preferred communication style: Simple, everyday language.
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js framework
 - **Language**: TypeScript with ES modules
-- **API Design**: RESTful API following conventional HTTP methods and status codes
-- **Data Storage**: In-memory storage implementation with interface for future database integration
+- **API Design**: RESTful API following conventional HTTP methods and status codes with authentication middleware
+- **Data Storage**: PostgreSQL database with Drizzle ORM for type-safe database operations
+- **Authentication**: Replit OpenID Connect integration with session-based authentication
 - **Validation**: Zod schemas for request/response validation shared between client and server
+- **Security**: User-scoped data access with authentication checks on all protected endpoints
 
 ### Database Schema Design
 The application uses Drizzle ORM with PostgreSQL dialect, featuring:
-- **Tasks Table**: Stores task information with UUID primary keys, descriptions, priority levels (low/medium/high), stages (todo/in-progress/clarification/complete), and timestamps
-- **Users Table**: Basic user management with username/password authentication structure
+- **Users Table**: Stores user information from Replit authentication with id, email, firstName, lastName, profileImageUrl, and timestamps
+- **Sessions Table**: Manages user sessions for Replit authentication with session data and expiration
+- **Tasks Table**: Stores user-specific task information with userId foreign key, descriptions, priority levels (low/medium/high), stages (todo/in-progress/clarification/complete), archive status, and timestamps
 - **Migration System**: Drizzle Kit for schema migrations and database management
 
 ### Component Architecture
-- **Kanban Board**: Drag-and-drop interface for task management with real-time updates
-- **Pomodoro Timer**: Configurable work/break sessions with visual progress indicators
+- **Authentication System**: Landing page for unauthenticated users, login/logout flow via Replit OAuth
+- **User Interface**: Authenticated home page with user profile dropdown and logout functionality
+- **Kanban Board**: Drag-and-drop interface for personal task management with real-time updates
+- **Pomodoro Timer**: Configurable work/break sessions with auto-run mode, skip functionality, and visual progress indicators
 - **Task Management**: Modal-based task creation and editing with priority and stage assignment
+- **Archive System**: Comprehensive archive functionality for individual and bulk task archiving
+- **Error Handling**: Comprehensive unauthorized error handling with automatic redirect to login
 - **Responsive Design**: Mobile-first approach with adaptive layouts
 
 ### Development Environment
@@ -69,7 +88,14 @@ The application uses Drizzle ORM with PostgreSQL dialect, featuring:
 - **ESLint/Prettier**: Code formatting and linting (implied by project structure)
 - **Replit Integration**: Development environment plugins for Replit platform
 
+### Authentication & Security
+- **OpenID Client**: Replit OpenID Connect integration for secure authentication
+- **Passport.js**: Authentication middleware with OpenID Connect strategy
+- **Session Management**: PostgreSQL-backed session store with 7-day TTL
+- **User Management**: Automatic user creation/updates from authentication claims
+
 ### Additional Libraries
 - **date-fns**: Date utility library for time formatting and manipulation
 - **clsx**: Utility for constructing className strings conditionally
-- **nanoid**: Compact URL-safe unique string ID generator
+- **connect-pg-simple**: PostgreSQL session store for Express sessions
+- **memoizee**: Function memoization for OpenID configuration caching
